@@ -13,6 +13,8 @@
 #include <time.h>
 #include <curses.h>
 
+/** @todo Create and move to defines.h */
+
 /**
  * @def CHEAT
  * @brief Compile with cheater features.
@@ -20,6 +22,14 @@
  * "Generate cheat grid" feature, which generates a very easy game for testing.
  */
 #define CHEAT
+
+/**
+ * @def USE_COLOR
+ * @brief Compile with color enabled.
+ * @details If you compile the program with `USE_COLOR` and your terminal
+ * supports it, it will render the tiles with color.
+ */
+#define USE_COLOR
 
 /**
  * @def USE_ARROWS
@@ -52,6 +62,42 @@ enum game_chars {
 };
 
 /**
+ * @enum color_pairs
+ * @brief Color pair numbers for curses
+ */
+enum color_pairs {
+    COL_GRAY  = 1, /**< @brief For borders */
+    COL_WHITE = 2, /**< @brief For inverting cursor */
+};
+
+/**
+ * @name Color macros
+ * Will only work if color is enabled and supported. Bold is not yet supported
+ * in fs-os.
+ * @{ */
+#define SET_COL(col)       \
+    {                      \
+        if (use_color) {   \
+            use_pair(col); \
+        }                  \
+    }
+
+#define RESET_COL()       \
+    {                     \
+        if (use_color) {  \
+            reset_pair(); \
+        }                 \
+    }
+
+#define INVERT_COL(col)       \
+    {                         \
+        if (use_color) {      \
+            invert_pair(col); \
+        }                     \
+    }
+/** @} */
+
+/**
  * @struct point_t
  * @brief Point in the **context grid**.
  * @details Not a point on the real terminal, but on the grid. This is useful
@@ -80,6 +126,12 @@ typedef struct {
      * */
     uint8_t* grid;
 } ctx_t;
+
+/**
+ * @var use_color
+ * @brief Used to check if we can use color at runtime
+ */
+static bool use_color = false;
 
 /*-----------------------------------------------------------------------------*/
 
@@ -251,6 +303,8 @@ static inline void draw_border(const ctx_t* ctx) {
     const int real_w   = ctx->w * (ctx->xsc + xspacing) + xspacing;
     const int real_h   = ctx->h * ctx->ysc;
 
+    SET_COL(COL_GRAY);
+
     /* First line */
     mvaddch(0, 0, '+');
     for (int x = 0; x < real_w; x++)
@@ -268,6 +322,8 @@ static inline void draw_border(const ctx_t* ctx) {
     for (int x = 0; x < real_w; x++)
         mvaddch(real_h + 1, x + 1, '-');
     mvaddch(real_h + 1, real_w + 1, '+');
+
+    RESET_COL();
 }
 
 /**
@@ -287,6 +343,18 @@ static void redraw_grid(const ctx_t* ctx) {
 
     draw_border(ctx);
 
+    /* Update the cursor to the real position:
+     *   - In the case of the X coor, add 1 to scale for extra horizontal
+     *     spacing (plus 1 to horizontal border).
+     *   - Get scaled position of tile.
+     *   - Go to center of the tile (Using scale without spacing).
+     *   - Add border size to get real position.
+     *   - Subtract 1 to get the zero-starting index. */
+    const int cursor_y =
+      (ctx->cursor.y * ysc) + (ctx->ysc - ctx->ysc / 2) + yborder - 1;
+    const int cursor_x =
+      (ctx->cursor.x * xsc) + (ctx->xsc - ctx->xsc / 2) + xborder - 1;
+
     /* Iterate tiles from grid */
     for (int y = 0; y < ctx->h; y++) {
         for (int x = 0; x < ctx->w; x++) {
@@ -297,23 +365,21 @@ static void redraw_grid(const ctx_t* ctx) {
             const int term_y = y * ysc + yborder;
             const int term_x = x * xsc + xborder;
             for (int ty = term_y; ty < term_y + ctx->ysc; ty++)
-                for (int tx = term_x; tx < term_x + ctx->xsc; tx++)
+                for (int tx = term_x; tx < term_x + ctx->xsc; tx++) {
+                    if (ty == cursor_y && tx == cursor_x)
+                        INVERT_COL(COL_WHITE);
+
+                    SET_COL(COL_WHITE);
                     mvaddch(ty, tx, c);
+                    RESET_COL();
+
+                    if (ty == cursor_y && tx == cursor_x)
+                        INVERT_COL(COL_WHITE);
+                }
         }
     }
 
-    /* Update the cursor to the real position:
-     *   - In the case of the X coor, add 1 to scale for extra horizontal
-     *     spacing (plus 1 to horizontal border).
-     *   - Get scaled position of tile.
-     *   - Go to center of the tile (Using scale without spacing).
-     *   - Add border size to get real position.
-     *   - Subtract 1 to get the zero-starting index. */
-    const int real_y =
-      (ctx->cursor.y * ysc) + (ctx->ysc - ctx->ysc / 2) + yborder - 1;
-    const int real_x =
-      (ctx->cursor.x * xsc) + (ctx->xsc - ctx->xsc / 2) + xborder - 1;
-    move(real_y, real_x);
+    move(cursor_y, cursor_x);
 }
 
 /**
@@ -405,6 +471,18 @@ int main_5x5(int argc, char** argv) {
     noecho();  /* Don't print when typing */
 #ifdef USE_ARROWS
     keypad(stdscr, true); /* Enable keypad (arrow keys) */
+#endif
+
+#ifdef USE_COLOR
+    /* Global used to indicate redraw_grid that color is supported at runtime */
+    use_color = has_colors();
+
+    if (use_color) {
+        start_color();
+
+        init_pair(COL_GRAY, COLOR_GRAY, COLOR_BLACK);
+        init_pair(COL_WHITE, COLOR_WHITE_B, COLOR_BLACK);
+    }
 #endif
 
     /* Init random seed */
