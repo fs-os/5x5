@@ -2,6 +2,11 @@
 **Simple CLI 5x5 game made in C.**
 
 ### Description
+> **Note**
+> This is a fork of [8dcc/5x5](https://github.com/8dcc/5x5)
+> for [fs-os](https://github.com/fs-os/fs-os). You can try it there by running
+> the `5x5` command.
+
 This simple project was inspired by the `5x5` emacs command.
 
 ### Building
@@ -29,7 +34,7 @@ Usage:
 
 $ ./5x5.out --keys
 Controls:
-    <arrows> - Move in the grid
+    <arrows> - Move in the grid (unsupported)
         hjkl - Move in the grid (vim-like)
      <space> - Toggle selected cell (and adjacent)
            r - Generate random grid
