@@ -1,7 +1,17 @@
-#ifndef _MAIN_H
-#define _MAIN_H 1
+#ifndef _APPS_5x5_H
+#define _APPS_5x5_H 1
 
 #include <stdint.h>
+
+/** @todo: Move defines and structs to source */
+
+/**
+ * @brief Entry point of the 5x5 game
+ * @param argc Number of arguments
+ * @param argv Vector of string arguments
+ * @return Exit code
+ */
+int main_5x5(int argc, char** argv);
 
 /**
  * @def CHEAT
@@ -10,6 +20,14 @@
  * "Generate cheat grid" feature, which generates a very easy game for testing.
  */
 #define CHEAT
+
+/**
+ * @def USE_ARROWS
+ * @brief Compile with arrow navigation.
+ * @details If the program is compiled with this macro defined, it will support
+ * arrow navigation. Currently unsupported.
+ */
+/* #define USE_ARROWS */
 
 #define DEFAULT_H   5 /**< @brief Default height */
 #define DEFAULT_W   5 /**< @brief Default width */
@@ -63,4 +81,4 @@ typedef struct {
     uint8_t* grid;
 } ctx_t;
 
-#endif /* MAIN_H_ */
+#endif /* _APPS_5x5_H */

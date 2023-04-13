@@ -1,9 +1,7 @@
 /**
- * @file      main.c
- * @brief     Main file for the game.
+ * @file      5x5.c
+ * @brief     Main file for the 5x5 game.
  * @author    8dcc
- *
- * @todo Add mouse support.
  */
 
 #include <stdbool.h>
@@ -13,9 +11,9 @@
 #include <string.h>
 #include <ctype.h> /* tolower */
 #include <time.h>
-#include <ncurses.h>
+#include <curses.h>
 
-#include "main.h" /* Structs and defines */
+#include "5x5.h" /* Structs and defines */
 
 /**
  * @brief Parses a pair string with format `AxB` using atoi.
@@ -57,7 +55,7 @@ static inline bool parse_args(int argc, char** argv, ctx_t* ctx) {
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--resolution")) {
             if (i == argc - 1) {
-                fprintf(stderr, "Not enough arguments for \"%s\"\n", argv[i]);
+                printf("Not enough arguments for \"%s\"\n", argv[i]);
                 arg_error = true;
                 break;
             }
@@ -65,16 +63,15 @@ static inline bool parse_args(int argc, char** argv, ctx_t* ctx) {
             i++;
             parse_pair(&ctx->w, &ctx->h, argv[i]);
             if (ctx->w < MIN_W || ctx->h < MIN_H) {
-                fprintf(stderr,
-                        "Invalid resolution format for \"%s\".\n"
-                        "Minimum resolution: %dx%d\n",
-                        argv[i - 1], MIN_W, MIN_H);
+                printf("Invalid resolution format for \"%s\".\n"
+                       "Minimum resolution: %dx%d\n",
+                       argv[i - 1], MIN_W, MIN_H);
                 arg_error = true;
                 break;
             }
         } else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--scale")) {
             if (i == argc - 1) {
-                fprintf(stderr, "Not enough arguments for \"%s\"\n", argv[i]);
+                printf("Not enough arguments for \"%s\"\n", argv[i]);
                 arg_error = true;
                 break;
             }
@@ -82,16 +79,18 @@ static inline bool parse_args(int argc, char** argv, ctx_t* ctx) {
             i++;
             parse_pair(&ctx->ysc, &ctx->xsc, argv[i]);
             if (ctx->ysc < 1 || ctx->xsc < 1) {
-                fprintf(stderr,
-                        "Invalid scale format for \"%s\".\n"
-                        "Minimum scale: 1\n",
-                        argv[i - 1]);
+                printf("Invalid scale format for \"%s\".\n"
+                       "Minimum scale: 1\n",
+                       argv[i - 1]);
                 arg_error = true;
                 break;
             }
         } else if (!strcmp(argv[i], "-k") || !strcmp(argv[i], "--keys")) {
             puts("Controls:\n"
+
+#ifdef USE_ARROWS
                  "    <arrows> - Move in the grid\n"
+#endif
                  "        hjkl - Move in the grid (vim-like)\n"
                  "     <space> - Toggle selected cell (and adjacent)\n"
                  "           r - Generate random grid\n"
@@ -312,13 +311,7 @@ static inline bool check_win(const ctx_t* ctx) {
     return true;
 }
 
-/**
- * @brief Entry point of the program
- * @param argc Number of arguments
- * @param argv Vector of string arguments
- * @return Exit code
- */
-int main(int argc, char** argv) {
+int main_5x5(int argc, char** argv) {
     /* Main context struct */
     ctx_t ctx = (ctx_t){
         .h      = DEFAULT_H,
@@ -339,10 +332,12 @@ int main(int argc, char** argv) {
         ctx.w - ctx.w / 2 - 1,
     };
 
-    initscr();            /* Init ncurses */
-    raw();                /* Scan input without pressing enter */
-    noecho();             /* Don't print when typing */
+    initscr(); /* Init ncurses */
+    raw();     /* Scan input without pressing enter */
+    noecho();  /* Don't print when typing */
+#ifdef USE_ARROWS
     keypad(stdscr, true); /* Enable keypad (arrow keys) */
+#endif
 
     /* Init random seed */
     srand(time(NULL));
@@ -369,22 +364,30 @@ int main(int argc, char** argv) {
         /* Parse input. 'q' quits and there is vim-like navigation */
         switch (c) {
             case 'k':
+#ifdef USE_ARROWS
             case KEY_UP:
+#endif
                 if (ctx.cursor.y > 0)
                     ctx.cursor.y--;
                 break;
             case 'j':
+#ifdef USE_ARROWS
             case KEY_DOWN:
+#endif
                 if (ctx.cursor.y < ctx.h - 1)
                     ctx.cursor.y++;
                 break;
             case 'h':
+#ifdef USE_ARROWS
             case KEY_LEFT:
+#endif
                 if (ctx.cursor.x > 0)
                     ctx.cursor.x--;
                 break;
             case 'l':
+#ifdef USE_ARROWS
             case KEY_RIGHT:
+#endif
                 if (ctx.cursor.x < ctx.w - 1)
                     ctx.cursor.x++;
                 break;
